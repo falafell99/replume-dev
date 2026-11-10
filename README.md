@@ -12,9 +12,9 @@
 
 **A verification layer for AI coding agents.** Replume runs on top of Claude Code, Codex, Cursor and soon Hermes Agent. It watches each step the agent takes, steers it back when it leaves the task, and checks the finished commit against what you actually asked for. Then you know what the agent did without re-reading the whole diff.
 
-Replume never writes code and never calls a model itself. It does not replace your agent; it checks it.
+Replume runs checks alongside your agent. Auto can ask a second installed agent to review the result. See [Privacy](https://replume.dev/docs/privacy/) for what is sent and how to turn it off.
 
-> **Status: private beta.** This repository holds the docs, the changelog and the issue tracker. The source code is not public yet. Join the beta at [replume.dev](https://replume.dev).
+> **Free during beta.** Install the CLI from npm. This repository is for feedback and public project information.
 
 ## Why
 
@@ -24,47 +24,30 @@ Review gets slower as agents produce more code. Replume moves the checking to wh
 
 ## How it works
 
-1. **Set up once.** `replume init` creates `.replume/` in your repository and installs agent hooks where the agent supports them. It prints a matrix of what Replume can observe, block and steer for each agent.
-2. **State the task.** `replume task "…"` writes a short task contract: what was asked, where the agent may work, and which scenarios must pass.
-3. **The agent works; Replume watches.** Every step is recorded. Rules warn or block when the agent edits outside the task, deletes or weakens tests, runs destructive commands or loops. Replume tells the agent what to do instead.
-4. **Verify the commit.** `replume verify` checks out that exact commit in an isolated working copy with a clean environment and runs your team's scenarios. If Docker is available, scenarios run in a container with no network.
-5. **Read the report.** An example:
+1. **Install and set up in your Git repository.**
 
-```
-DONE         (2)  reset sends one email to the user · login still works
-EXTRA        (1)  src/analytics.js: changed, not part of the task
-NOT CHECKED  (1)  src/server.js: no scenario declares coverage
-```
+   ```sh
+   npm install -g replume-cli
+   replume init
+   ```
 
-Exit codes: `0` pass, `1` fail, `2` incomplete, so `replume verify` can be a required check on commits and PRs.
+   Use `replume init --cursor` or `replume init --codex` to explicitly install those agents’ hooks. In Codex, review and trust them with `/hooks`. Follow the commit instructions in init’s `Next:` block.
 
-## Principles
+2. **Start a fresh agent session in that same folder.** Open Claude Code (`claude`), Codex (`codex`), or Cursor with this repo open. Give the agent your task as its first message. In the default Auto mode, Replume makes the task contract from that prompt. You can run `replume watch` in a second terminal.
+3. **Read the session report.** After a supported finish hook runs, use `replume report --session`. Read the verdict, reason, and Next line.
 
-- **Honest by default.** A changed file that no scenario covers is reported as NOT CHECKED, never as passed. Nothing shows green unless it actually ran.
-- **Neutral.** One layer for every agent, instead of each vendor checking its own agent.
-- **The hard stop is at the commit.** Live hooks help, but they can be switched off on a developer machine. The commit check is the one you can enforce.
+**A diff and green tests are not enough on their own.** In the default flow without scenarios, `replume verify` re-checks a commit and needs recorded agent-session evidence to return PASS. If you made the change without a recorded session, it can return `INCOMPLETE [NO_AGENT_SESSION]` even when tests pass. For a first run, start the agent and give it the task after init. Standalone `replume verify --task` is planned for 0.2.13.
 
-## Supported agents
-
-| Agent | Watch | Block or steer live | Verify the commit |
-|---|---|---|---|
-| Claude Code | yes | yes | yes |
-| Codex | yes | partial | yes |
-| Cursor | beta | not yet | yes |
-| Hermes Agent | in development | in development | yes |
-| Any other agent | via git | no | yes |
-
-`replume init` prints the exact matrix for your setup.
+See [Start](https://replume.dev/docs/) for setup and [Agents](https://replume.dev/docs/agents/) for what each adapter records.
 
 ## Commands
 
 | Command | What it does |
 |---|---|
-| `replume init` | Create `.replume/`, install hooks where supported, print the capability matrix |
-| `replume task "<text>"` | Write the task contract for the next agent task |
-| `replume watch` | Live view of the agent's steps and rule hits |
-| `replume verify` | Run the contract and scenarios on a commit in an isolated copy |
-| `replume report` | Re-print the saved report for a commit |
+| `replume init` | Set up hooks and configuration in this repository |
+| `replume watch` | Follow recorded steps and test results |
+| `replume report --session` | Read the saved session report |
+| `replume verify` | Re-check a committed change against the task and available evidence |
 
 ## Feedback
 
